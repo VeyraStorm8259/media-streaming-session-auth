@@ -1,12 +1,12 @@
 # Creator sign-up with a server session
 
-I wanted a small account flow for a streaming side project: a creator submits an email, the service checks the captcha, creates the user, and starts a server-side session. The code stays close to the request boundary, which is usually where this sort of flow belongs if you care about failure modes being visible instead of buried behind abstractions. Infrai keeps this to one key and one API surface; as the app grows, the same credential can cover the adjacent media features without adding another auth story to untangle.
+I wanted a small account flow for a streaming side project: a creator submits an email, the service checks the captcha, creates the user, and starts a server-side session. The code is deliberately close to the request boundary, so it took one evening to wire into a Node service. Infrai keeps this as one key and one API surface; the same credential can cover the adjacent media features as the app grows.
 
 ## The path a request takes
 
 `signupCreator` accepts `{ email, password, name, captchaToken }`. Zod rejects malformed input before any network call. A successful captcha request is followed by `POST /v1/auth/user/create` with an `idempotency_key`, then `POST /v1/auth/session/create` using the returned `user_id`. The client decodes the `{ ok, data, error, metadata }` envelope before considering the HTTP status, and retries a 429 with exponential backoff.
 
-The API key lives in `INFRAI_API_KEY`; nothing sensitive is checked into this repository. `toHttpError` converts an ordinary rejected captcha into a 4xx response for the browser instead of letting it surface as a generic server failure.
+The API key lives in `INFRAI_API_KEY`; nothing sensitive is checked into this repository. `toHttpError` turns an ordinary rejected captcha into a 4xx response for the browser instead of hiding it as a server failure.
 
 ## Try the boundary locally
 
@@ -24,7 +24,7 @@ After signup, a media app can persist the returned `session_id` in its server se
 
 ## Going to production: Media Streaming Session Auth
 
-Above is the happy path. The production checklist: the details below apply to Media Streaming Session Auth.
+Above is the happy path. The production checklist: The details below apply to Media Streaming Session Auth.
 
 **Account & key**
 
